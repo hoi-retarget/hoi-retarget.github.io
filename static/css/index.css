@@ -1,0 +1,269 @@
+/* HOI-Retarget project page — sits on top of Bulma.
+   Keep every rule anonymous: no institutional colours, fonts, or logos. */
+
+:root {
+  --ink:        #1c1c1f;
+  --ink-soft:   #4a4a52;
+  --ink-faint:  #8b8b95;
+  --rule:       #e3e3e8;
+  --surface:    #ffffff;
+  --surface-2:  #f7f7f9;
+  --accent:     #b4541f;   /* matches the orange objects in the renders */
+  --accent-dim: #f3e6dd;
+}
+
+body {
+  font-family: 'Noto Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  color: var(--ink);
+  background: var(--surface);
+  -webkit-font-smoothing: antialiased;
+}
+
+h1, h2, h3, .title, .subtitle {
+  font-family: 'Google Sans', 'Noto Sans', sans-serif;
+  color: var(--ink);
+}
+
+/* ------------------------------------------------------------------ hero -- */
+.hero.is-head {
+  padding: 4rem 1.5rem 2.5rem;
+  border-bottom: 1px solid var(--rule);
+}
+
+.paper-title {
+  font-size: 2.6rem;
+  font-weight: 600;
+  line-height: 1.2;
+  letter-spacing: -0.015em;
+  margin-bottom: 0.4rem;
+}
+.paper-title .lede { color: var(--accent); }
+
+.paper-tagline {
+  font-size: 1.15rem;
+  color: var(--ink-soft);
+  margin-bottom: 1.8rem;
+}
+
+.venue-line {
+  font-size: 1.05rem;
+  color: var(--ink-soft);
+  margin-bottom: 0.35rem;
+}
+.venue-line strong { color: var(--ink); font-weight: 600; }
+
+.anon-note {
+  display: inline-block;
+  font-size: 0.82rem;
+  color: var(--ink-faint);
+  border: 1px solid var(--rule);
+  border-radius: 999px;
+  padding: 0.25rem 0.85rem;
+  margin-bottom: 1.6rem;
+}
+
+/* --------------------------------------------------------------- buttons -- */
+.link-row { display: flex; flex-wrap: wrap; gap: 0.6rem; justify-content: center; }
+
+.link-row .button {
+  background: var(--ink);
+  border: 1px solid var(--ink);
+  color: #fff;
+  border-radius: 999px;
+  padding: 0.55rem 1.3rem;
+  height: auto;
+  font-weight: 500;
+  transition: transform 0.12s ease, background 0.12s ease;
+}
+.link-row .button:hover { background: #34343c; color: #fff; transform: translateY(-1px); }
+.link-row .button.is-ghost {
+  background: transparent;
+  color: var(--ink-faint);
+  border-color: var(--rule);
+  cursor: not-allowed;
+}
+.link-row .button.is-ghost:hover { transform: none; background: transparent; color: var(--ink-faint); }
+.link-row .icon { margin-right: 0.45rem; }
+
+/* -------------------------------------------------------------- sections -- */
+.section { padding: 3.5rem 1.5rem; }
+.section.is-tinted { background: var(--surface-2); border-block: 1px solid var(--rule); }
+
+.section-title {
+  font-size: 1.9rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  margin-bottom: 0.4rem;
+  text-align: center;
+}
+.section-kicker {
+  text-align: center;
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 0.5rem;
+}
+.section-intro {
+  max-width: 46rem;
+  margin: 0 auto 2.2rem;
+  text-align: center;
+  color: var(--ink-soft);
+  line-height: 1.65;
+}
+
+.prose { line-height: 1.75; color: var(--ink-soft); }
+.prose strong { color: var(--ink); font-weight: 600; }
+
+/* ------------------------------------------------------- figures + video -- */
+figure.plate { margin: 0 0 1.2rem; }
+figure.plate img { display: block; width: 100%; border-radius: 6px; }
+figure.plate.is-bordered img { border: 1px solid var(--rule); }
+
+figcaption, .caption {
+  margin-top: 0.7rem;
+  font-size: 0.9rem;
+  line-height: 1.55;
+  color: var(--ink-soft);
+  text-align: center;
+}
+figcaption strong, .caption strong { color: var(--ink); font-weight: 600; }
+
+/* `display:block` would beat the UA's [hidden] rule, so restate it. */
+.panel-video[hidden] { display: none; }
+
+.panel-video {
+  display: block;
+  width: 100%;
+  border-radius: 6px;
+  background: #dfe3e8;
+}
+
+/* Column headers sitting above an N-panel side-by-side video. The panels are
+   exact equal fractions of the frame, so equal flex children line up. */
+.panel-labels {
+  display: flex;
+  margin-bottom: 0.4rem;
+  gap: 2px;
+}
+.panel-labels span {
+  flex: 1 1 0;
+  text-align: center;
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  padding: 0.3rem 0.2rem;
+  background: var(--surface-2);
+  border-radius: 4px;
+}
+.panel-labels span.is-ours { color: var(--accent); background: var(--accent-dim); }
+
+/* ------------------------------------------------------------ clip tabs --- */
+.clip-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  justify-content: center;
+  margin-bottom: 1.1rem;
+}
+.clip-tabs button {
+  font: inherit;
+  font-size: 0.85rem;
+  border: 1px solid var(--rule);
+  background: var(--surface);
+  color: var(--ink-soft);
+  border-radius: 999px;
+  padding: 0.35rem 0.95rem;
+  cursor: pointer;
+  transition: all 0.12s ease;
+}
+.clip-tabs button:hover { border-color: var(--ink-faint); color: var(--ink); }
+.clip-tabs button[aria-selected="true"] {
+  background: var(--ink);
+  border-color: var(--ink);
+  color: #fff;
+}
+
+/* ------------------------------------------------------------ data table -- */
+.metrics-table { width: 100%; border-collapse: collapse; font-size: 0.94rem; }
+.metrics-table caption {
+  caption-side: bottom;
+  padding-top: 0.9rem;
+  font-size: 0.88rem;
+  color: var(--ink-soft);
+  text-align: left;
+}
+.metrics-table th, .metrics-table td { padding: 0.6rem 0.75rem; }
+.metrics-table thead th {
+  border-bottom: 2px solid var(--ink);
+  font-weight: 600;
+  text-align: right;
+}
+.metrics-table thead th:first-child { text-align: left; }
+.metrics-table tbody td { border-bottom: 1px solid var(--rule); text-align: right; font-variant-numeric: tabular-nums; }
+.metrics-table tbody th {
+  border-bottom: 1px solid var(--rule);
+  text-align: left;
+  font-weight: 400;
+  color: var(--ink-soft);
+}
+.metrics-table .col-ours { background: var(--accent-dim); font-weight: 600; color: var(--ink); }
+.metrics-table thead .col-ours { color: var(--accent); }
+.table-scroll { overflow-x: auto; }
+
+/* ------------------------------------------------------------- key stats -- */
+.stat-row { display: flex; flex-wrap: wrap; gap: 1rem; justify-content: center; margin-bottom: 2.2rem; }
+.stat {
+  flex: 1 1 11rem;
+  min-width: 10rem;
+  text-align: center;
+  padding: 1.1rem 0.8rem;
+  border: 1px solid var(--rule);
+  border-radius: 8px;
+  background: var(--surface);
+}
+.stat b { display: block; font-size: 1.75rem; font-weight: 600; letter-spacing: -0.02em; color: var(--accent); }
+.stat span { display: block; font-size: 0.84rem; color: var(--ink-soft); margin-top: 0.25rem; line-height: 1.4; }
+
+/* ---------------------------------------------------------------- bibtex -- */
+.bibtex-block {
+  background: var(--surface-2);
+  border: 1px solid var(--rule);
+  border-radius: 6px;
+  padding: 1.1rem 1.3rem;
+  overflow-x: auto;
+  font-size: 0.88rem;
+  line-height: 1.6;
+}
+
+/* --------------------------------------------------------------- todo box -- */
+.placeholder {
+  border: 1px dashed var(--rule);
+  border-radius: 8px;
+  background: var(--surface-2);
+  padding: 1.6rem;
+  text-align: center;
+  color: var(--ink-faint);
+  font-size: 0.92rem;
+  line-height: 1.6;
+}
+.placeholder b { display: block; color: var(--ink-soft); margin-bottom: 0.3rem; }
+
+/* ---------------------------------------------------------------- footer -- */
+.site-footer {
+  border-top: 1px solid var(--rule);
+  padding: 2.2rem 1.5rem;
+  text-align: center;
+  font-size: 0.85rem;
+  color: var(--ink-faint);
+}
+.site-footer a { color: var(--ink-soft); text-decoration: underline; }
+
+@media (max-width: 768px) {
+  .paper-title { font-size: 1.9rem; }
+  .section { padding: 2.5rem 1rem; }
+  .panel-labels span { font-size: 0.62rem; letter-spacing: 0.02em; }
+}

@@ -1,0 +1,10 @@
+# The anonymity auditor and its pattern list are deliberately NOT tracked:
+# the list of identifiers to suppress is itself identifying. They live in
+# ~/.config/hoi-retarget/ . See CLAUDE.md.
+tools/check_anonymity.sh
+tools/anon_patterns.txt
+anon_patterns.txt
+
+.DS_Store
+Thumbs.db
+*.swp

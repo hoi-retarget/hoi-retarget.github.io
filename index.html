@@ -1,0 +1,526 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>HOI-Retarget: Contact-Centric Retargeting for Human-Object Interaction</title>
+  <meta name="description"
+        content="HOI-Retarget transfers human-object interaction onto humanoid robots while preserving the location and timing of object contacts, for large-scale robot HOI data generation.">
+  <meta name="keywords" content="humanoid, motion retargeting, human-object interaction, loco-manipulation">
+  <meta name="robots" content="index, follow">
+
+  <!-- Open Graph: anonymous by construction — no author, no site_name. -->
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="HOI-Retarget: Contact-Centric Retargeting for Human-Object Interaction">
+  <meta property="og:description"
+        content="Contact-centric retargeting of human-object interaction onto humanoid robots.">
+  <meta property="og:image" content="./static/images/teaser.jpg">
+
+  <link href="https://fonts.googleapis.com/css?family=Google+Sans:400,500,600|Noto+Sans:400,600&display=swap"
+        rel="stylesheet">
+  <link rel="stylesheet" href="./static/css/bulma.min.css">
+  <link rel="stylesheet" href="./static/css/fontawesome.all.min.css">
+  <link rel="stylesheet" href="./static/css/index.css">
+  <script defer src="./static/js/fontawesome.all.min.js"></script>
+  <script defer src="./static/js/index.js"></script>
+</head>
+
+<body>
+
+<!-- ============================================================== HERO === -->
+<section class="hero is-head">
+  <div class="container is-max-desktop has-text-centered">
+    <h1 class="paper-title">
+      <span class="lede">HOI-Retarget:</span><br>
+      Contact-Centric Retargeting for Human-Object Interaction
+    </h1>
+    <p class="paper-tagline">
+      Transferring human-object interaction onto humanoid robots while preserving
+      <em>where</em> and <em>when</em> the object is touched.
+    </p>
+
+    <p class="venue-line"><strong>Anonymous Authors</strong></p>
+    <p class="venue-line">Under review, ICRA 2027</p>
+    <p class="anon-note">
+      <span class="icon is-small"><i class="fas fa-user-secret"></i></span>
+      Author and affiliation details withheld for double-blind review
+    </p>
+
+    <div class="link-row">
+      <!-- TODO: swap each `is-ghost` span for a real <a href="..."> once public. -->
+      <span class="button is-ghost" title="Link added after review">
+        <span class="icon"><i class="fas fa-file-pdf"></i></span><span>Paper</span>
+      </span>
+      <span class="button is-ghost" title="Link added after review">
+        <span class="icon"><i class="fas fa-scroll"></i></span><span>arXiv</span>
+      </span>
+      <span class="button is-ghost" title="Link added after review">
+        <span class="icon"><i class="fab fa-github"></i></span><span>Code</span>
+      </span>
+      <span class="button is-ghost" title="Link added after review">
+        <span class="icon"><i class="fas fa-database"></i></span><span>Dataset</span>
+      </span>
+      <a class="button" href="#results">
+        <span class="icon"><i class="fas fa-play"></i></span><span>Results</span>
+      </a>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================ TEASER === -->
+<section class="section" style="padding-top: 2.5rem;">
+  <div class="container is-max-widescreen">
+    <figure class="plate">
+      <img src="./static/images/teaser.jpg"
+           alt="Humanoid robots carrying, lifting and moving a variety of everyday objects, retargeted from human motion capture.">
+      <figcaption>
+        HOI-Retarget converts human-object interaction into humanoid motion with the
+        original contacts intact, producing large-scale humanoid-object interaction data.
+      </figcaption>
+    </figure>
+  </div>
+</section>
+
+<!-- ========================================================== ABSTRACT === -->
+<section class="section is-tinted">
+  <div class="container is-max-desktop">
+    <h2 class="section-title">Abstract</h2>
+    <div class="content prose" style="margin-top: 1.5rem;">
+      <p>
+        Imitating retargeted human motion with reinforcement learning (RL) is a dominant
+        recipe for teaching humanoid robots whole-body skills, but it is data-hungry and
+        largely confined to object-free motion. Retargeting human-object interaction (HOI)
+        is markedly harder: the pipeline must bridge the human-robot embodiment gap yet
+        existing methods handle only simple objects such as boxes without faithfully
+        preserving contact.
+      </p>
+      <p>
+        We present <strong>HOI-Retarget</strong>, a contact-centric retargeting method that
+        transfers HOI onto a humanoid robot for large-scale motion-data generation. It uses
+        windowed trajectory optimization with tracking, contact and smoothing costs that is
+        able to retarget HOI while preserving accurate contacts. The method is able to
+        generate datasets consisting of diverse objects and motions, as well as object size
+        augmentations and multi-robot collaboration. Evaluated against retargeting
+        baselines, HOI-Retarget preserves object contact substantially better at a lower
+        compute cost.
+      </p>
+    </div>
+
+    <div class="stat-row" style="margin-top: 2.5rem;">
+      <div class="stat">
+        <b>0.5 cm</b>
+        <span>mean contact-point gap, down from 18.3 cm for the closest baseline</span>
+      </div>
+      <div class="stat">
+        <b>4&times;</b>
+        <span>faster to retarget a clip than the interaction-aware baseline</span>
+      </div>
+      <div class="stat">
+        <b>4,421</b>
+        <span>released robot HOI clips &mdash; 7.46 hours over 13 object categories</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================ METHOD === -->
+<section class="section">
+  <div class="container is-max-widescreen">
+    <p class="section-kicker">Method</p>
+    <h2 class="section-title">How it works</h2>
+    <p class="section-intro">
+      Body pose alone is not enough. Because humans and humanoids differ in proportions,
+      joint structure and reach, matching poses independently can slide a hand off the
+      object, move it to a functionally different surface, or push it through the mesh.
+      HOI-Retarget instead optimizes directly against the contact the human made.
+    </p>
+
+    <figure class="plate">
+      <img src="./static/images/pipeline.jpg"
+           alt="Pipeline: source HOI motion, IK retargeting with object scaling, windowed trajectory optimization, and downstream policy use.">
+      <figcaption>
+        <strong>(a)</strong> HOI motion from a dataset or a video reconstruction is taken
+        as source. <strong>(b)</strong> Standard IK retargeting turns the human motion into
+        robot joint data; the object mesh and trajectory are scaled by the human-to-robot
+        ratio. <strong>(c)</strong> Windowed trajectory optimization with tracking, contact
+        and smoothing costs produces a kinematically feasible retarget that keeps the
+        contacts. <strong>(d)</strong> The result feeds downstream policies, optionally
+        after dynamic refinement in simulation.
+      </figcaption>
+    </figure>
+
+    <div class="columns is-variable is-6" style="margin-top: 2.5rem;">
+      <div class="column content prose">
+        <h3 class="title is-6">Contacts as object-frame targets</h3>
+        <p>
+          Each modeled active source contact is expressed as a target <em>in the object
+          frame</em> rather than in the world. The optimization then drives the robot's palm
+          to that point, so the grasp lands on the surface the human actually used &mdash;
+          and it re-anchors automatically when the object is rescaled.
+        </p>
+      </div>
+      <div class="column content prose">
+        <h3 class="title is-6">Overlapping-window optimization</h3>
+        <p>
+          Body-motion tracking, contact alignment, foot support and temporal smoothness are
+          balanced under joint-position and velocity limits. Overlapping windows couple
+          consecutive frames while keeping memory bounded, so long clips stay tractable.
+        </p>
+      </div>
+      <div class="column content prose">
+        <h3 class="title is-6">Correcting noisy contacts</h3>
+        <p>
+          Contact annotations recovered from monocular video are frequently wrong. An
+          optional interactive tool lets the target location and time interval of each
+          contact segment be corrected before the optimization runs.
+        </p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- =========================================================== RESULTS === -->
+<section class="section is-tinted" id="results">
+  <div class="container is-max-desktop">
+    <p class="section-kicker">Results</p>
+    <h2 class="section-title">Diverse objects and embodiments</h2>
+    <p class="section-intro">
+      The full OMOMO dataset retargeted to two humanoid platforms. Every clip below shows
+      the same motion on the human source and both robots, under a shared camera.
+    </p>
+
+    <div class="clip-group">
+      <div class="clip-tabs" role="tablist" aria-label="OMOMO clips">
+        <button type="button" role="tab">Large table</button>
+        <button type="button" role="tab">Plastic box</button>
+        <button type="button" role="tab">Monitor</button>
+        <button type="button" role="tab">White chair</button>
+        <button type="button" role="tab">Small box</button>
+      </div>
+      <div class="panel-labels">
+        <span>Human source</span><span class="is-ours">Unitree G1</span><span class="is-ours">Unitree H2</span>
+      </div>
+      <video class="panel-video" data-src="./static/videos/omomo/sub1_largetable_026.mp4"
+             poster="./static/videos/posters/sub1_largetable_026.jpg" muted loop playsinline preload="none"></video>
+      <video class="panel-video" data-src="./static/videos/omomo/sub1_plasticbox_038.mp4"
+             poster="./static/videos/posters/sub1_plasticbox_038.jpg" muted loop playsinline preload="none" hidden></video>
+      <video class="panel-video" data-src="./static/videos/omomo/sub3_monitor_021.mp4"
+             poster="./static/videos/posters/sub3_monitor_021.jpg" muted loop playsinline preload="none" hidden></video>
+      <video class="panel-video" data-src="./static/videos/omomo/sub4_whitechair_015.mp4"
+             poster="./static/videos/posters/sub4_whitechair_015.jpg" muted loop playsinline preload="none" hidden></video>
+      <video class="panel-video" data-src="./static/videos/omomo/sub8_smallbox_023.mp4"
+             poster="./static/videos/posters/sub8_smallbox_023.jpg" muted loop playsinline preload="none" hidden></video>
+      <p class="caption">
+        The same contact-centric formulation transfers to a second embodiment with different
+        proportions and joint limits, with no per-robot retuning.
+      </p>
+    </div>
+
+    <figure class="plate" style="margin-top: 3rem;">
+      <img src="./static/images/diverse.jpg"
+           alt="Grid of retargeted interactions across many object categories, showing the human source, the G1 and the H2.">
+      <figcaption>
+        Results across diverse embodiments and datasets.
+        <strong>Top</strong> SMPL-X human source &middot;
+        <strong>Middle</strong> Unitree G1 &middot;
+        <strong>Bottom</strong> Unitree H2.
+      </figcaption>
+    </figure>
+  </div>
+</section>
+
+<!-- ==================================================== OTHER DATASETS === -->
+<section class="section">
+  <div class="container is-max-desktop">
+    <p class="section-kicker">Generality</p>
+    <h2 class="section-title">Beyond a single dataset</h2>
+    <p class="section-intro">
+      The same pipeline runs on other HOI sources without modification. Because the
+      optimization is anchored in the <em>object</em> frame, several actors can be solved
+      against one shared object trajectory &mdash; which is what makes multi-robot
+      collaboration fall out for free.
+    </p>
+
+    <div class="clip-group">
+      <div class="clip-tabs" role="tablist" aria-label="Other dataset clips">
+        <button type="button" role="tab">Dumbbell</button>
+        <button type="button" role="tab">Pillow</button>
+        <button type="button" role="tab">Side table</button>
+        <button type="button" role="tab">Collaboration &mdash; bottle</button>
+        <button type="button" role="tab">Collaboration &mdash; toolbox</button>
+      </div>
+      <div class="panel-labels">
+        <span>Human source</span><span class="is-ours">HOI-Retarget &rarr; Unitree G1</span>
+      </div>
+      <video class="panel-video" data-src="./static/videos/datasets/dumbbell.mp4"
+             poster="./static/videos/posters/dumbbell.jpg" muted loop playsinline preload="none"></video>
+      <video class="panel-video" data-src="./static/videos/datasets/pillow.mp4"
+             poster="./static/videos/posters/pillow.jpg" muted loop playsinline preload="none" hidden></video>
+      <video class="panel-video" data-src="./static/videos/datasets/side_table.mp4"
+             poster="./static/videos/posters/side_table.jpg" muted loop playsinline preload="none" hidden></video>
+      <video class="panel-video" data-src="./static/videos/datasets/bigwaterbottle.mp4"
+             poster="./static/videos/posters/bigwaterbottle.jpg" muted loop playsinline preload="none" hidden></video>
+      <video class="panel-video" data-src="./static/videos/datasets/toolbox.mp4"
+             poster="./static/videos/posters/toolbox.jpg" muted loop playsinline preload="none" hidden></video>
+      <p class="caption">
+        Single-actor clips from three public HOI datasets, plus two collaborative
+        two-actor sequences retargeted onto a pair of G1s sharing one object.
+      </p>
+    </div>
+  </div>
+</section>
+
+<!-- ======================================================== COMPARISON === -->
+<section class="section is-tinted">
+  <div class="container is-max-desktop">
+    <p class="section-kicker">Comparison</p>
+    <h2 class="section-title">Against OmniRetarget</h2>
+    <p class="section-intro">
+      Interaction-aware retargeting preserves the overall body-object geometry, but does not
+      minimize the error to each individual source contact. On objects with thin or
+      spatially localized grasp regions the hand ends up somewhere the human never touched.
+    </p>
+
+    <div class="clip-group">
+      <div class="clip-tabs" role="tablist" aria-label="Comparison clips">
+        <button type="button" role="tab">White chair</button>
+        <button type="button" role="tab">Clothes stand</button>
+      </div>
+      <div class="panel-labels">
+        <span>Human source</span><span>OmniRetarget</span><span class="is-ours">HOI-Retarget (ours)</span>
+      </div>
+      <video class="panel-video" data-src="./static/videos/comparison/sub10_whitechair_023.mp4"
+             poster="./static/videos/posters/sub10_whitechair_023.jpg" muted loop playsinline preload="none"></video>
+      <video class="panel-video" data-src="./static/videos/comparison/sub1_clothesstand_001.mp4"
+             poster="./static/videos/posters/sub1_clothesstand_001.jpg" muted loop playsinline preload="none" hidden></video>
+      <p class="caption">
+        OmniRetarget loses the original grasp, producing a motion that no longer represents
+        the intended interaction. HOI-Retarget keeps the hand on the surface the human used.
+      </p>
+    </div>
+
+    <figure class="plate is-bordered" style="margin-top: 3rem;">
+      <img src="./static/images/hoi_vs_omni.jpg"
+           alt="Two interactions compared: HOI-Retarget keeps the grasp on the chair seat and the coat stand, while OmniRetarget places the hands off the contact surface.">
+      <figcaption>
+        Qualitative comparison against the source SMPL-X motion. OmniRetarget places the
+        hands off the surface the human used; HOI-Retarget preserves the intended contact.
+        <em>Note the panel order in the figures &mdash; ours, source, OmniRetarget &mdash;
+        is the mirror of the video above.</em>
+      </figcaption>
+    </figure>
+
+    <figure class="plate is-bordered" style="margin-top: 2rem;">
+      <img src="./static/images/hoi_vs_omni_zoom.jpg"
+           alt="Close-up of the same two grasps, showing the hand on the coat stand branch and on the chair seat.">
+      <figcaption>Close-up at the moment of contact.</figcaption>
+    </figure>
+
+    <div class="table-scroll" style="margin-top: 3rem;">
+      <table class="metrics-table">
+        <caption>
+          Kinematic retargeting quality over 13 OMOMO object categories on the Unitree G1.
+          GMR is a control that retargets only the human motion and leaves the object
+          trajectory untouched, i.e. no HOI consideration at all &mdash; which is why it can
+          win on the two body-only metrics while failing completely on contact.
+        </caption>
+        <thead>
+          <tr>
+            <th scope="col">Metric</th>
+            <th scope="col">GMR</th>
+            <th scope="col">OmniRetarget</th>
+            <th scope="col" class="col-ours">Ours</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><th scope="row">Body pose deviation (&deg;) &darr;</th><td>22.5</td><td>30.6</td><td class="col-ours">24.6</td></tr>
+          <tr><th scope="row">Link velocity direction (&deg;) &darr;</th><td>19.4</td><td>28.9</td><td class="col-ours">25.2</td></tr>
+          <tr><th scope="row">Contact-point gap (m) &darr;</th><td>0.368</td><td>0.183</td><td class="col-ours">0.005</td></tr>
+          <tr><th scope="row">Hand contact F1 &uarr;</th><td>0.197</td><td>0.295</td><td class="col-ours">0.734</td></tr>
+          <tr><th scope="row">Body jerk (m/s<sup>3</sup>) &darr;</th><td>66.7</td><td>193.5</td><td class="col-ours">49.9</td></tr>
+          <tr><th scope="row">Compute time (s/clip) &darr;</th><td>3.8</td><td>157.5</td><td class="col-ours">37.4</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- ====================================================== AUGMENTATION === -->
+<section class="section">
+  <div class="container is-max-desktop">
+    <p class="section-kicker">Data generation</p>
+    <h2 class="section-title">Object-scale augmentation</h2>
+    <p class="section-intro">
+      One captured motion becomes many. Because contacts live in the object frame, they
+      scale with the object &mdash; so a shrunk or grown object is still grasped at its
+      intended location rather than being clipped through or held in mid-air.
+    </p>
+
+    <div class="clip-group">
+      <div class="clip-tabs" role="tablist" aria-label="Augmentation clips">
+        <button type="button" role="tab">Large box</button>
+        <button type="button" role="tab">White chair</button>
+        <button type="button" role="tab">Wood chair</button>
+      </div>
+      <div class="panel-labels">
+        <span>&times;0.25</span><span>&times;0.50</span><span>&times;1.00</span><span>&times;1.25</span><span>&times;1.50</span>
+      </div>
+      <video class="panel-video" data-src="./static/videos/augmentation/sub16_largebox_029.mp4"
+             poster="./static/videos/posters/sub16_largebox_029.jpg" muted loop playsinline preload="none"></video>
+      <video class="panel-video" data-src="./static/videos/augmentation/sub10_whitechair_028.mp4"
+             poster="./static/videos/posters/sub10_whitechair_028.jpg" muted loop playsinline preload="none" hidden></video>
+      <video class="panel-video" data-src="./static/videos/augmentation/sub14_woodchair_042.mp4"
+             poster="./static/videos/posters/sub14_woodchair_042.jpg" muted loop playsinline preload="none" hidden></video>
+      <p class="caption">
+        The same source clip retargeted onto the Unitree G1 across five object scales,
+        from a quarter to one-and-a-half times true size.
+      </p>
+    </div>
+
+    <figure class="plate" style="margin-top: 2.5rem;">
+      <img src="./static/images/augmentation.jpg"
+           alt="Object-scale augmentation from a quarter to one and a half times true size, with the grasp re-anchoring at each scale.">
+      <figcaption>Object-scale augmentation (&times;0.25&ndash;&times;1.50) preserves the original contacts.</figcaption>
+    </figure>
+  </div>
+</section>
+
+<!-- ============================================ VIDEO RECONSTRUCTION === -->
+<section class="section is-tinted">
+  <div class="container is-max-desktop">
+    <p class="section-kicker">In the wild</p>
+    <h2 class="section-title">From monocular video</h2>
+    <p class="section-intro">
+      A single hand-held video of a person moving an unseen table, reconstructed into HOI
+      meshes and trajectories and then retargeted. Video reconstruction gives noisy contact
+      annotations; the interactive correction tool fixes the target and interval of each
+      contact segment before optimization, and a clean kinematic result follows.
+    </p>
+
+    <div class="placeholder">
+      <b>Placeholder &mdash; monocular reconstruction clip</b>
+      Suggested layout: <em>input RGB video &rarr; reconstructed SMPL-X + object &rarr;
+      retargeted G1</em>, side by side. A "before / after contact correction" pair would
+      make the correction tool's contribution legible.<br>
+      Drop the sources into <code>tools/build_media.sh</code> and rerun it.
+    </div>
+  </div>
+</section>
+
+<!-- ======================================================== REFINEMENT === -->
+<section class="section">
+  <div class="container is-max-desktop">
+    <p class="section-kicker">Downstream</p>
+    <h2 class="section-title">Dynamic refinement</h2>
+    <p class="section-intro">
+      The kinematic retarget is a reference, not a controller. Passing it through a physics
+      refiner removes the remaining artifacts and yields a dynamically feasible trajectory
+      that can be used directly for reference-state initialization in downstream RL.
+    </p>
+
+    <div class="clip-group">
+      <div class="clip-tabs" role="tablist" aria-label="Refinement clips">
+        <button type="button" role="tab">Clothes stand</button>
+        <button type="button" role="tab">White chair</button>
+        <button type="button" role="tab">Large table</button>
+        <button type="button" role="tab">Trash can (&times;2.5)</button>
+      </div>
+      <video class="panel-video" data-src="./static/videos/refinement/sub1_clothesstand_001.mp4"
+             poster="./static/videos/posters/sub1_clothesstand_001.jpg" muted loop playsinline preload="none"></video>
+      <video class="panel-video" data-src="./static/videos/refinement/sub10_whitechair_028.mp4"
+             poster="./static/videos/posters/sub10_whitechair_028.jpg" muted loop playsinline preload="none" hidden></video>
+      <video class="panel-video" data-src="./static/videos/refinement/sub1_largetable_002.mp4"
+             poster="./static/videos/posters/sub1_largetable_002.jpg" muted loop playsinline preload="none" hidden></video>
+      <video class="panel-video" data-src="./static/videos/refinement/trashcan_aug250_refined.mp4"
+             poster="./static/videos/posters/trashcan_aug250_refined.jpg" muted loop playsinline preload="none" hidden></video>
+      <p class="caption">
+        <strong>Left</strong> trajectory-optimization refiner &middot;
+        <strong>Center</strong> the kinematic HOI-Retarget reference both refiners start from &middot;
+        <strong>Right</strong> RL tracker rollout.
+        <em>Panel labels are burned into these renders and still say
+        &ldquo;DynaRetarget / Source / HOI-Retarget-Dyn&rdquo; &mdash; re-render before publishing.</em>
+      </p>
+    </div>
+
+    <div class="table-scroll" style="margin-top: 2.5rem;">
+      <table class="metrics-table">
+        <caption>
+          HOI motion quality after dynamic refinement, for references produced by
+          OmniRetarget and by HOI-Retarget, under two refiners.
+        </caption>
+        <thead>
+          <tr>
+            <th scope="col">Metric</th>
+            <th scope="col">RL tracker &mdash; Omni.</th>
+            <th scope="col" class="col-ours">RL tracker &mdash; ours</th>
+            <th scope="col">SBTO &mdash; Omni.</th>
+            <th scope="col" class="col-ours">SBTO &mdash; ours</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><th scope="row">Body pose deviation (&deg;) &darr;</th><td>33.5</td><td class="col-ours">29.7</td><td>33.2</td><td class="col-ours">28.7</td></tr>
+          <tr><th scope="row">Link velocity direction (&deg;) &darr;</th><td>37.4</td><td class="col-ours">35.1</td><td>40.5</td><td class="col-ours">39.5</td></tr>
+          <tr><th scope="row">Object path error (m) &darr;</th><td>0.285</td><td class="col-ours">0.213</td><td>0.269</td><td class="col-ours">0.194</td></tr>
+          <tr><th scope="row">Contact-point gap (m) &darr;</th><td>0.096</td><td class="col-ours">0.086</td><td>0.141</td><td class="col-ours">0.099</td></tr>
+          <tr><th scope="row">Hand orientation on object (&deg;) &darr;</th><td>31.5</td><td class="col-ours">25.3</td><td>38.4</td><td class="col-ours">28.1</td></tr>
+          <tr><th scope="row">Body jerk (m/s<sup>3</sup>) &darr;</th><td>90.8</td><td class="col-ours">85.8</td><td>58.2</td><td class="col-ours">55.4</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- =========================================================== DATASET === -->
+<section class="section is-tinted">
+  <div class="container is-max-desktop">
+    <p class="section-kicker">Release</p>
+    <h2 class="section-title">Dataset</h2>
+    <p class="section-intro">
+      We release the pipeline together with a dataset of robot HOI clips, intended as
+      reference motion for downstream reinforcement learning.
+    </p>
+    <div class="stat-row">
+      <div class="stat"><b>4,421</b><span>robot HOI clips</span></div>
+      <div class="stat"><b>7.46 h</b><span>of retargeted motion</span></div>
+      <div class="stat"><b>13</b><span>object categories</span></div>
+      <div class="stat"><b>2</b><span>humanoid platforms</span></div>
+    </div>
+    <div class="placeholder">
+      <b>Placeholder &mdash; download and format</b>
+      Once the anonymity period ends: a download link, the per-clip file format and its
+      fields, the licence, and a minimal loader snippet.
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================ BIBTEX === -->
+<section class="section">
+  <div class="container is-max-desktop">
+    <h2 class="section-title">BibTeX</h2>
+    <p class="section-intro">Anonymized entry for the review period.</p>
+<pre class="bibtex-block"><code>@article{hoiretarget2026,
+  title  = {HOI-Retarget: Contact-Centric Retargeting for Human-Object Interaction},
+  author = {Anonymous},
+  note   = {Under review, ICRA 2027},
+  year   = {2026}
+}</code></pre>
+  </div>
+</section>
+
+<footer class="site-footer">
+  <div class="container is-max-desktop">
+    <p>
+      Page built from the
+      <a href="https://github.com/nerfies/nerfies.github.io">Nerfies</a> project template,
+      used under
+      <a href="http://creativecommons.org/licenses/by-sa/4.0/">CC BY-SA 4.0</a>.
+    </p>
+    <p style="margin-top: 0.5rem;">
+      This site is anonymized for double-blind review and contains no author or
+      institutional information.
+    </p>
+  </div>
+</footer>
+
+</body>
+</html>
