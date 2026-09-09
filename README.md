@@ -55,19 +55,10 @@ watermarks, UI chrome, wall-clock numbers, file paths.
 
 ## Still to do
 
-These are marked with a dashed `.placeholder` box on the page. Don't delete a
-placeholder — fill it or leave it visible.
-
 - [ ] **Paper / arXiv / code / dataset links** — the four header buttons are
       inert `is-ghost` spans. Swap each for a real `<a href>` after the
       anonymity period.
 - [ ] **Dataset download** — format, fields, licence, loader snippet.
-- [ ] **Teaser + pipeline figure and section prose** — both figures and the
-      surrounding text are placeholders pending the current report draft.
-- [ ] **Both metric tables** — awaiting re-run numbers.
-- [ ] **Monocular capture background** — the face is blurred on every frame, but
-      the room behind it is a private home. Nothing readable is visible; a
-      tighter crop is available if that is not good enough.
 
 ### Camera framing — read before adding a Human/G1/H2 panel
 

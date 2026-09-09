@@ -230,6 +230,7 @@
         The same contact-centric formulation transfers to either embodiment with no
         per-robot retuning.
       </p>
+      <p class="sources"><b>Source dataset &amp; robots: </b><a href="https://arxiv.org/abs/2309.16237" target="_blank" rel="noopener noreferrer">OMOMO</a> (Li et al., 2023)<span class="sep">&middot;</span><a href="https://www.unitree.com/g1" target="_blank" rel="noopener noreferrer">Unitree G1</a><span class="sep">&middot;</span><a href="https://www.unitree.com/H2" target="_blank" rel="noopener noreferrer">Unitree H2</a></p>
     </div>
   </div>
 </section>
@@ -251,11 +252,11 @@
 
     <div class="clip-group">
       <div class="clip-tabs" role="tablist" aria-label="Other dataset clips">
-        <button type="button" role="tab">Dumbbell</button>
-        <button type="button" role="tab">Pillow</button>
-        <button type="button" role="tab">Side table</button>
-        <button type="button" role="tab">Collaboration &mdash; bottle</button>
-        <button type="button" role="tab">Collaboration &mdash; toolbox</button>
+        <button type="button" role="tab">Dumbbell &middot; I'm-HOI</button>
+        <button type="button" role="tab">Pillow &middot; NeuralDome</button>
+        <button type="button" role="tab">Side table &middot; HUMOTO</button>
+        <button type="button" role="tab">Bottle &middot; CoRoleHOI</button>
+        <button type="button" role="tab">Toolbox &middot; CoRoleHOI</button>
       </div>
       <div class="panel-labels">
         <span>Human source</span><span class="is-ours">Unitree G1</span><span class="is-ours">Unitree H2</span>
@@ -271,8 +272,12 @@
       <video class="panel-video" data-src="./static/videos/datasets/toolbox.mp4"
              poster="./static/videos/posters/toolbox.jpg" muted loop playsinline preload="none" hidden></video>
       <p class="caption">
-        Three single-actor clips from public HOI datasets, plus two collaborative sequences in which a pair of robots share one object.
+        Three single-actor clips from public HOI datasets, plus two collaborative
+        sequences in which a pair of robots share one object. Four datasets join OMOMO in
+        the released corpus &mdash; ParaHome, NeuralDome, CoRoleHOI and I'm-HOI; the HUMOTO
+        clip is shown as a retargeting result but is not part of the release.
       </p>
+      <p class="sources"><b>Source datasets: </b><a href="https://arxiv.org/abs/2312.08869" target="_blank" rel="noopener noreferrer">I'm-HOI</a> (Zhao et al., 2024)<span class="sep">&middot;</span><a href="https://arxiv.org/abs/2212.07626" target="_blank" rel="noopener noreferrer">NeuralDome</a> (Zhang et al., 2023)<span class="sep">&middot;</span><a href="https://arxiv.org/abs/2504.10414" target="_blank" rel="noopener noreferrer">HUMOTO</a> (Lu et al., 2025)<span class="sep">&middot;</span><a href="https://huggingface.co/datasets/RayZuo/CoRoleHOI" target="_blank" rel="noopener noreferrer">CoRoleHOI</a> (Zuo, 2026)<span class="sep">&middot;</span><a href="https://arxiv.org/abs/2401.10232" target="_blank" rel="noopener noreferrer">ParaHome</a> (Kim et al., 2024)</p>
     </div>
   </div>
 </section>
@@ -307,6 +312,7 @@
         OmniRetarget loses the original grasp, producing a motion that no longer represents
         the intended interaction. HOI-Retarget keeps the hand on the surface the human used.
       </p>
+      <p class="sources"><b>Baselines &amp; data: </b><a href="https://arxiv.org/abs/2509.26633" target="_blank" rel="noopener noreferrer">OmniRetarget</a> (Yang et al., 2026)<span class="sep">&middot;</span><a href="https://arxiv.org/abs/2510.02252" target="_blank" rel="noopener noreferrer">GMR</a> (Araujo et al., 2026)<span class="sep">&middot;</span><a href="https://arxiv.org/abs/2309.16237" target="_blank" rel="noopener noreferrer">OMOMO</a> (Li et al., 2023)</p>
     </div>
 
 
@@ -363,16 +369,23 @@
         <button type="button" role="tab">Large box</button>
         <button type="button" role="tab">Wood chair</button>
       </div>
+      <div class="rowlabel-grid">
       <div class="panel-labels">
         <span>&times;0.25</span><span>&times;0.50</span><span>&times;1.00</span><span>&times;1.25</span><span>&times;1.50</span>
       </div>
+        <div class="row-labels">
+          <span>G1</span><span class="is-ours">H2</span>
+        </div>
       <video class="panel-video" data-src="./static/videos/augmentation/sub16_largebox_029.mp4"
              poster="./static/videos/posters/sub16_largebox_029.jpg" muted loop playsinline preload="none"></video>
       <video class="panel-video" data-src="./static/videos/augmentation/sub14_woodchair_042.mp4"
              poster="./static/videos/posters/sub14_woodchair_042.jpg" muted loop playsinline preload="none" hidden></video>
+      </div>
       <p class="caption">
-        One source clip at five object scales, from a quarter to one-and-a-half times true size. <strong>Top row</strong> Unitree G1 &middot; <strong>Bottom row</strong> Unitree H2. The grasp re-anchors to the new surface at every scale on both robots.
+        One source clip at five object scales, from a quarter to one-and-a-half times
+        true size, on both robots. The grasp re-anchors to the new surface at every scale.
       </p>
+      <p class="sources"><b>Source dataset &amp; robots: </b><a href="https://arxiv.org/abs/2309.16237" target="_blank" rel="noopener noreferrer">OMOMO</a> (Li et al., 2023)<span class="sep">&middot;</span><a href="https://www.unitree.com/g1" target="_blank" rel="noopener noreferrer">Unitree G1</a><span class="sep">&middot;</span><a href="https://www.unitree.com/H2" target="_blank" rel="noopener noreferrer">Unitree H2</a></p>
     </div>
   </div>
 </section>
@@ -405,6 +418,7 @@
         contact-correction tool, then refined into a dynamically feasible trajectory.
         The subject's face is blurred throughout for review anonymity.
       </p>
+      <p class="sources"><b>Reconstruction: </b><a href="https://arxiv.org/abs/2512.11988" target="_blank" rel="noopener noreferrer">CARI4D</a> (Xie et al., 2026)<span class="sep">&middot;</span><a href="https://www.unitree.com/g1" target="_blank" rel="noopener noreferrer">Unitree G1</a></p>
     </div>
   </div>
 </section>
@@ -452,8 +466,11 @@
       <video class="panel-video" data-src="./static/videos/refinement/sub11_monitor_081.mp4"
              poster="./static/videos/posters/sub11_monitor_081.jpg" muted loop playsinline preload="none" hidden></video>
       <p class="caption">
-        The kinematic retarget is a reference, not a controller. Both refiners start from the left panel; each produces a dynamically feasible trajectory usable for reference-state initialization downstream.
+        The kinematic retarget is a reference, not a controller. Both refiners start from
+        the left panel; each produces a dynamically feasible trajectory usable for
+        reference-state initialization downstream.
       </p>
+      <p class="sources"><b>Refiner &amp; data: </b><a href="https://arxiv.org/abs/2602.06827" target="_blank" rel="noopener noreferrer">DynaRetarget</a> (Dhedin et al., 2026)<span class="sep">&middot;</span><a href="https://arxiv.org/abs/2309.16237" target="_blank" rel="noopener noreferrer">OMOMO</a> (Li et al., 2023)</p>
     </div>
 
     <div class="table-scroll" style="margin-top: 2.5rem;">
