@@ -61,22 +61,30 @@ placeholder — fill it or leave it visible.
 - [ ] **Paper / arXiv / code / dataset links** — the four header buttons are
       inert `is-ghost` spans. Swap each for a real `<a href>` after the
       anonymity period.
-- [ ] **Monocular reconstruction clip** — the "From monocular video" section has
-      no video. Suggested: *input RGB → reconstructed SMPL-X + object →
-      retargeted G1*, plus a before/after pair showing the contact-correction
-      tool earning its place.
 - [ ] **Dataset download** — format, fields, licence, loader snippet.
-- [ ] **Dynamic-refinement panel labels** — those four clips have labels burned
-      into the frame reading "DynaRetarget / Source / HOI-Retarget-Dyn". The
-      middle panel is the kinematic reference both refiners start from, not a
-      human source, and the right panel is the RL tracker rollout. Re-render
-      with clearer labels, or crop them off and use `.panel-labels` like the
-      other sections do.
-- [ ] **Panel order** — the videos run *source → OmniRetarget → ours*; the two
-      comparison figures, which carry their own burned-in labels, run *ours →
-      source → OmniRetarget*. Pick one and make both match.
-- [ ] **Teaser video** — the hero is currently a still. A short montage would
-      carry the result better.
+- [ ] **Teaser + pipeline figure and section prose** — both figures and the
+      surrounding text are placeholders pending the current report draft.
+- [ ] **Both metric tables** — awaiting re-run numbers.
+- [ ] **Monocular capture background** — the face is blurred on every frame, but
+      the room behind it is a private home. Nothing readable is visible; a
+      tighter crop is available if that is not good enough.
+
+### Camera framing — read before adding a Human/G1/H2 panel
+
+Every panel in the OMOMO, other-datasets and augmentation sections is rendered at
+**one camera distance (4.05 m)**. The recorder's default is per-subject —
+`VIEWER_CAM_DISTANCE_DICT[robot] × 1.5` gives the G1 3.0 m and the H2 4.05 m, and
+the SMPL renderer hardcodes 3.0 m — which pushes the taller robot back exactly far
+enough to fill the same fraction of frame. That normalises away the 1.32 m /
+1.80 m height difference these sections exist to show. `build_media.sh` documents
+the fix; do not restack these against panels rendered at the stock distance.
+
+Two sections deliberately opt out:
+
+- **The OmniRetarget comparison** scales the human to the robot's object size so
+  the contact comparison is like-for-like. Its subjects read slightly larger.
+- **The collaborative clips** use a two-actor renderer whose distance comes from
+  the robot-to-robot separation, not the robot type, so they never had the bug.
 
 ## Credits
 

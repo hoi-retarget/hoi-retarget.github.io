@@ -2,7 +2,8 @@
 # Rebuild every image and video asset under static/ from the source renders.
 #
 # Everything this script writes is stripped of metadata (-map_metadata -1 for
-# video, re-encode for stills) because the upstream PDFs carry an author name.
+# video, a Pillow re-save for stills) because the upstream PDFs carry an author
+# name and the encoders stamp their own version strings.
 # See CLAUDE.md: no asset may reach static/ without passing through here.
 #
 # Usage: tools/build_media.sh [figures|videos|all]
@@ -11,163 +12,208 @@ set -euo pipefail
 SITE="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 FFMPEG="${FFMPEG:-ffmpeg}"
 command -v "$FFMPEG" >/dev/null || { echo "ffmpeg not found; set FFMPEG=/path/to/ffmpeg" >&2; exit 1; }
+
 # Source renders live outside this repo, in the private working tree. Their
 # paths are NOT hardcoded here: a public repo must not name private directories.
-# Point WORKSPACE at that tree (or set the three SRC_* vars directly), e.g.
+# Point WORKSPACE at that tree (or set the SRC_* vars directly), e.g.
 #   WORKSPACE=~/<workspace> tools/build_media.sh
 WORKSPACE="${WORKSPACE:-$(cd "$SITE/.." && pwd)}"
 SRC_PAPER="${SRC_PAPER:-$WORKSPACE/paper/new_media}"
-SRC_JOB5="${SRC_JOB5:-$WORKSPACE/renders/omomo_h2_augmentation_omni_compare}"
-SRC_TRIP="${SRC_TRIP:-$WORKSPACE/renders/dynamic_refinement_triptychs}"
-
-for d in "$SRC_PAPER" "$SRC_JOB5" "$SRC_TRIP"; do
-  [[ -d "$d" ]] || { echo "missing source dir: $d" >&2
-                     echo "set WORKSPACE, or SRC_PAPER/SRC_JOB5/SRC_TRIP, to the render tree" >&2
-                     exit 1; }
-done
+# Human/G1/H2 panels re-rendered behind ONE camera distance -- see §"camera".
+SRC_FIXED="${SRC_FIXED:-$WORKSPACE/renders/fixed_camera}"
+SRC_COMPARE="${SRC_COMPARE:-$WORKSPACE/renders/hoi_vs_omni}"
+SRC_COLLAB="${SRC_COLLAB:-$WORKSPACE/renders/collaborative}"
+SRC_DYN="${SRC_DYN:-$WORKSPACE/renders/dynamic_cells}"
+SRC_MONO="${SRC_MONO:-$WORKSPACE/renders/monocular}"
 
 IMG="$SITE/static/images"
 VID="$SITE/static/videos"
-mkdir -p "$IMG" "$VID"/{comparison,omomo,datasets,augmentation,refinement,posters}
 
 # ---------------------------------------------------------------- helpers ---
-# enc <out> <inputs...> -- <filter_complex> : encode web-safe h264, no metadata
+have() { [[ -d "$1" ]] || { echo "  -- skipping, no source dir: $1" >&2; return 1; }; }
+
+# enc <out> <inputs...> -- <filter_complex>
 enc() {
   local out="$1"; shift
   local -a ins=()
   while [[ "$1" != "--" ]]; do ins+=(-i "$1"); shift; done
   shift
+  mkdir -p "$(dirname "$out")"
   "$FFMPEG" -y -v error -nostdin "${ins[@]}" \
     -filter_complex "$1" \
     -map_metadata -1 -map_chapters -1 -an \
     -c:v libx264 -profile:v main -pix_fmt yuv420p -crf "${CRF:-26}" -preset slow \
     -movflags +faststart "$out"
-  printf '  %-58s %s\n' "${out#$SITE/}" "$(du -h "$out" | cut -f1)"
+  printf '  %-56s %s\n' "${out#$SITE/}" "$(du -h "$out" | cut -f1)"
 }
 
-# poster <video> : grab a mid-clip frame as the video's poster image
-poster() {
-  local v="$1" name
-  name="$(basename "${v%.mp4}")"
-  local dur; dur=$("$FFMPEG" -v error -i "$v" -f null - 2>&1 >/dev/null || true)
-  "$FFMPEG" -y -v error -nostdin -ss 1.2 -i "$v" -vframes 1 \
-    -map_metadata -1 -q:v 4 "$VID/posters/$name.jpg"
-}
-
-# hstack N panels of the same size, each scaled to $PW wide
-hstack_filter() {
+# Lay N same-sized panels in a row, each scaled to $1 px. Panels are exact equal
+# fractions of the frame, which is what lets the HTML label row line up.
+hrow() {
   local n="$1" pw="$2" f=""
-  for ((i = 0; i < n; i++)); do f+="[$i:v]scale=$pw:$pw:flags=lanczos,setsar=1[v$i];"; done
+  for ((i = 0; i < n; i++)); do f+="[$i:v]fps=30,scale=$pw:$pw:flags=lanczos,setsar=1[v$i];"; done
   for ((i = 0; i < n; i++)); do f+="[v$i]"; done
-  f+="hstack=inputs=$n"
-  printf '%s' "$f"
+  printf '%shstack=inputs=%s' "$f" "$n"
+}
+
+# Two rows of N panels: inputs are row-major (top row first).
+hgrid2() {
+  local n="$1" pw="$2" f="" i
+  for ((i = 0; i < 2 * n; i++)); do f+="[$i:v]fps=30,scale=$pw:$pw:flags=lanczos,setsar=1[v$i];"; done
+  for ((i = 0; i < n; i++)); do f+="[v$i]"; done; f+="hstack=inputs=$n[top];"
+  for ((i = n; i < 2 * n; i++)); do f+="[v$i]"; done; f+="hstack=inputs=$n[bot];"
+  printf '%s[top][bot]vstack=2' "$f"
 }
 
 # ---------------------------------------------------------------- figures ---
 build_figures() {
   echo "== figures =="
-  # Vector sources -> raster. pdftoppm drops the PDF's author/producer fields.
   local tmp; tmp="$(mktemp -d)"; trap 'rm -rf "$tmp"' RETURN
+  # Rasterise: pdftoppm drops the PDF's author/producer fields.
+  pdftoppm -png -r 150 -singlefile "$SRC_PAPER/summary.pdf" "$tmp/pipeline"
 
-  pdftoppm -png -r 150 -singlefile "$SRC_PAPER/summary.pdf"       "$tmp/pipeline"
-  pdftoppm -png -r 200 -singlefile "$SRC_PAPER/hoivsomni.pdf"     "$tmp/hoi_vs_omni"
-  pdftoppm -png -r 200 -singlefile "$SRC_PAPER/hoivsomnizoom.pdf" "$tmp/hoi_vs_omni_zoom"
-  pdftoppm -png -r 150 -singlefile "$SRC_PAPER/augmentation.pdf"  "$tmp/augmentation"
-
-  # width, quality: figures are 3D renders on soft gradients, JPEG holds up well.
   python3 - "$tmp" "$IMG" "$SRC_PAPER" <<'PY'
 import sys, pathlib
 from PIL import Image
-
+Image.MAX_IMAGE_PIXELS = None
 tmp, out, paper = (pathlib.Path(p) for p in sys.argv[1:4])
-JOBS = [
-    (tmp / "pipeline.png",           "pipeline.jpg",        2200),
-    (tmp / "hoi_vs_omni.png",        "hoi_vs_omni.jpg",     1600),
-    (tmp / "hoi_vs_omni_zoom.png",   "hoi_vs_omni_zoom.jpg",1600),
-    (tmp / "augmentation.png",       "augmentation.jpg",    2200),
-    (paper / "title.png",            "teaser.jpg",          2400),
-    (paper / "diverse.png",          "diverse.jpg",         2400),
-]
-for src, name, width in JOBS:
+out.mkdir(parents=True, exist_ok=True)
+for src, name, width in [(tmp / "pipeline.png", "pipeline.jpg", 2200),
+                         (paper / "title.png",  "teaser.jpg",   2400)]:
     im = Image.open(src).convert("RGB")
     if im.width > width:
         im = im.resize((width, round(im.height * width / im.width)), Image.LANCZOS)
-    # save() with no exif/icc argument writes neither -> metadata is dropped
     im.save(out / name, "JPEG", quality=90, optimize=True, progressive=True)
-    print(f"  static/images/{name:<24} {im.width}x{im.height}  "
+    print(f"  static/images/{name:<16} {im.width}x{im.height}  "
           f"{(out / name).stat().st_size / 1e6:.2f} MB")
 PY
 }
 
 # ----------------------------------------------------------------- videos ---
-build_videos() {
+# The camera
+# ----------
+# Every Human/G1/H2 panel in SRC_FIXED was rendered at ONE camera distance
+# (4.05 m). The recorder's default is per-subject -- 3.0 m for the G1, 4.05 m for
+# the H2, 3.0 m for the human -- which pushes the taller robot back exactly far
+# enough to fill the same fraction of frame, hiding the 1.32 m / 1.80 m
+# difference the page is trying to show. Do not restack these against panels
+# rendered at the stock distance; the sizes would no longer be comparable.
+
+build_omomo() {
+  have "$SRC_FIXED/omomo" || return 0
+  echo "== OMOMO: human | G1 | H2 (one camera distance) =="
+  for stem in sub1_largetable_026 sub1_plasticbox_038 sub3_monitor_021 \
+              sub4_whitechair_015 sub8_smallbox_023; do
+    enc "$VID/omomo/${stem}.mp4" \
+      "$SRC_FIXED/omomo/${stem}__human.mp4" \
+      "$SRC_FIXED/omomo/${stem}__g1.mp4" \
+      "$SRC_FIXED/omomo/${stem}__h2.mp4" -- "$(hrow 3 512)"
+  done
+}
+
+build_datasets() {
+  echo "== other datasets: human | G1 | H2 =="
+  if have "$SRC_FIXED/datasets"; then
+    for label in dumbbell pillow side_table; do
+      enc "$VID/datasets/${label}.mp4" \
+        "$SRC_FIXED/datasets/${label}__human.mp4" \
+        "$SRC_FIXED/datasets/${label}__g1.mp4" \
+        "$SRC_FIXED/datasets/${label}__h2.mp4" -- "$(hrow 3 512)"
+    done
+  fi
+  # Collaborative pairs keep their own renderer's framing: it solves distance
+  # from the robot-to-robot separation, not the robot type, so it never had the
+  # normalisation problem the fixed camera exists to fix.
+  have "$SRC_COLLAB" || return 0
+  for pair in "bigwaterbottle:36_bigwaterbottle__0_152" "toolbox:448_toolbox__0_190"; do
+    IFS=: read -r label stem <<<"$pair"
+    enc "$VID/datasets/${label}.mp4" \
+      "$SRC_COLLAB/corole__${stem}__smplx_two.mp4" \
+      "$SRC_COLLAB/corole__${stem}__g1_two.mp4" \
+      "$SRC_COLLAB/corole__${stem}__two_h2.mp4" -- "$(hrow 3 512)"
+  done
+}
+
+build_comparison() {
+  have "$SRC_COMPARE" || return 0
   echo "== comparison: source | OmniRetarget | ours =="
-  local E="$SRC_JOB5/E_hoi_vs_smplx_vs_omniretarget"
   for stem in clothesstand__sub1_clothesstand_001 whitechair__sub10_whitechair_023; do
     enc "$VID/comparison/${stem#*__}.mp4" \
-      "$E/${stem}__smplx.mp4" "$E/${stem}__omniretarget.mp4" "$E/${stem}__hoi_retarget.mp4" \
-      -- "$(hstack_filter 3 512)"
+      "$SRC_COMPARE/${stem}__smplx.mp4" \
+      "$SRC_COMPARE/${stem}__omniretarget.mp4" \
+      "$SRC_COMPARE/${stem}__hoi_retarget.mp4" -- "$(hrow 3 512)"
   done
+}
 
-  echo "== omomo: source | G1 | H2 =="
-  local A="$SRC_JOB5/A_g1_omomo_results" B="$SRC_JOB5/B_h2_omomo_results"
-  for stem in largetable__sub1_largetable_026 plasticbox__sub1_plasticbox_038 \
-              monitor__sub3_monitor_021 whitechair__sub4_whitechair_015 \
-              smallbox__sub8_smallbox_023; do
-    enc "$VID/omomo/${stem#*__}.mp4" \
-      "$A/${stem}__smplx.mp4" "$A/${stem}__g1.mp4" "$B/${stem}__h2.mp4" \
-      -- "$(hstack_filter 3 512)"
+build_augmentation() {
+  have "$SRC_FIXED/augmentation" || return 0
+  echo "== augmentation: 5 scales, G1 over H2 =="
+  for stem in sub16_largebox_029 sub14_woodchair_042; do
+    local -a ins=()
+    for tag in g1 h2; do
+      for s in 0.25 0.50 1.00 1.25 1.50; do
+        ins+=("$SRC_FIXED/augmentation/${stem}__x${s}__${tag}.mp4")
+      done
+    done
+    enc "$VID/augmentation/${stem}.mp4" "${ins[@]}" -- "$(hgrid2 5 400)"
   done
+}
 
-  echo "== other datasets: source | G1 =="
-  local C="$SRC_JOB5/C_g1_diverse_datasets"
-  for pair in \
-    "imhd__dumbbell__20231014_dujsh_dumbbell_dumbbell_right_lunges1_0_0__550_880:dumbbell:" \
-    "neuraldome__pillow__subject03_pillow_1245__0_330:pillow:" \
-    "humoto__side_table__carry_side_table_with_both_hands_walk_ar_side_table__0_313:side_table:" \
-    "corole__36_bigwaterbottle__0_152:bigwaterbottle:_two" \
-    "corole__448_toolbox__0_190:toolbox:_two"; do
-    IFS=: read -r stem name sfx <<<"$pair"
-    enc "$VID/datasets/${name}.mp4" \
-      "$C/${stem}__smplx${sfx}.mp4" "$C/${stem}__g1${sfx}.mp4" \
-      -- "$(hstack_filter 2 512)"
+build_refinement() {
+  have "$SRC_DYN" || return 0
+  echo "== dynamic refinement: kinematic | trajectory-opt | RL tracker =="
+  # roll_hoi is 50 fps against the others' 30; hrow's per-input fps=30 resamples
+  # by timestamp so the three panels stay in sync.
+  for stem in sub2_woodchair_001 sub2_trashcan_012 sub10_whitechair_060 \
+              sub10_largebox_053 sub1_suitcase_022 sub10_smallbox_009 \
+              sub11_monitor_081; do
+    local obj="${stem#*_}"; obj="${obj%%_*}"
+    local d="$SRC_DYN/$obj/$stem"
+    enc "$VID/refinement/${stem}.mp4" \
+      "$d/${stem}__ref_hoi.mp4" "$d/${stem}__dyna_hoi.mp4" "$d/${stem}__roll_hoi.mp4" \
+      -- "$(hrow 3 512)"
   done
+}
 
-  echo "== augmentation: x0.25 .. x1.50 on G1 =="
-  local D="$SRC_JOB5/D_h2_object_size_augmentation"
-  for stem in largebox__sub16_largebox_029 whitechair__sub10_whitechair_028 \
-              woodchair__sub14_woodchair_042; do
-    enc "$VID/augmentation/${stem#*__}.mp4" \
-      "$D/${stem}__x0.25__g1.mp4" "$D/${stem}__x0.50__g1.mp4" "$D/${stem}__x1.00__g1.mp4" \
-      "$D/${stem}__x1.25__g1.mp4" "$D/${stem}__x1.50__g1.mp4" \
-      -- "$(hstack_filter 5 400)"
-  done
+build_monocular() {
+  have "$SRC_MONO" || return 0
+  echo "== monocular reconstruction (orangetable) =="
+  # The capture is 1080x1920 portrait against the square renders; centre-crop it
+  # to square so all four panels share one aspect. The face is blurred upstream.
+  enc "$VID/monocular/orangetable.mp4" \
+    "$SRC_MONO/capture_blurred.mp4" "$SRC_MONO/smplx.mp4" \
+    "$SRC_MONO/kinematic_g1.mp4" "$SRC_MONO/dynamic_g1.mp4" \
+    -- "[0:v]fps=30,crop=in_w:in_w:0:(in_h-in_w)/2,scale=400:400:flags=lanczos,setsar=1[v0];\
+[1:v]fps=30,scale=400:400:flags=lanczos,setsar=1[v1];\
+[2:v]fps=30,scale=400:400:flags=lanczos,setsar=1[v2];\
+[3:v]fps=30,scale=400:400:flags=lanczos,setsar=1[v3];[v0][v1][v2][v3]hstack=inputs=4"
+}
 
-  echo "== dynamic refinement (pre-composited triptychs) =="
-  for stem in sub1_clothesstand_001 sub10_whitechair_028 sub1_largetable_002 \
-              trashcan_aug250_refined; do
-    enc "$VID/refinement/${stem}.mp4" "$SRC_TRIP/${stem}.mp4" \
-      -- "[0:v]scale=1440:-2:flags=lanczos,setsar=1"
-  done
-
+build_posters() {
   echo "== posters =="
+  mkdir -p "$VID/posters"
   find "$VID" -name '*.mp4' -not -path '*/posters/*' -print0 |
-    while IFS= read -r -d '' v; do poster "$v"; done
-  # ffmpeg's mjpeg encoder stamps a `comment` tag naming its own version. Harmless
-  # in itself, but nothing leaves this build carrying tool provenance, so re-save
-  # each poster through PIL, which writes no metadata block at all.
-  python3 - "$VID/posters" <<'SCRUB'
+    while IFS= read -r -d '' v; do
+      "$FFMPEG" -y -v error -nostdin -ss 1.2 -i "$v" -vframes 1 \
+        -map_metadata -1 -q:v 4 "$VID/posters/$(basename "${v%.mp4}").jpg"
+    done
+  # ffmpeg's mjpeg encoder stamps a `comment` naming its own version, and Pillow
+  # carries info["comment"] through a plain re-save, so drop it explicitly.
+  python3 - "$VID/posters" <<'PY'
 import pathlib, sys
 from PIL import Image
 for p in sorted(pathlib.Path(sys.argv[1]).glob("*.jpg")):
     with Image.open(p) as im:
         rgb = im.convert("RGB")
-        # Pillow propagates info["comment"] into the saved COM marker, so a plain
-        # re-save keeps ffmpeg's encoder string. Drop it explicitly.
         rgb.info.pop("comment", None)
         rgb.save(p, "JPEG", quality=82, optimize=True)
-SCRUB
-  echo "  $(ls "$VID/posters" | wc -l) posters written, metadata scrubbed"
+print(f"  {len(list(pathlib.Path(sys.argv[1]).glob('*.jpg')))} posters, metadata scrubbed")
+PY
+}
+
+build_videos() {
+  build_omomo; build_datasets; build_comparison
+  build_augmentation; build_refinement; build_monocular; build_posters
 }
 
 case "${1:-all}" in

@@ -102,15 +102,20 @@ git config user.name  "HOI-Retarget Anonymous"
 git config user.email "hoi-retarget@users.noreply.github.com"
 ```
 
-`tools/check_anonymity.sh` fails if these drift. If a commit ever lands with the
-wrong author, it must be rewritten and force-pushed — a public commit's author
-field is permanent otherwise.
+The audit fails if these drift. If a commit ever lands with the wrong author, it
+must be rewritten and force-pushed — a public commit's author field is permanent
+otherwise.
 
-**Known residual risk, outside this repo's control:** pushes authenticate with
-whatever SSH key the machine offers, and GitHub attributes the *push* (visible
-in the repo's Activity tab and in org membership) to that account, independent of
-the commit author. Keeping this fully anonymous needs a dedicated GitHub account
-plus a dedicated SSH key. Do not assume it is handled.
+**Push identity — handled, keep it that way.** GitHub attributes the *push*
+(visible in the repo's public Activity tab) to whichever account owns the SSH key,
+independent of the commit author, so an anonymous commit author alone is not
+enough. This repo pins a dedicated key via repo-local `core.sshCommand`, and that
+key belongs to a separate, empty-profile GitHub account. The machine's default
+key belongs to a personal account — never push this repo with it. Verify with:
+
+```bash
+ssh -i <the pinned key> -o IdentitiesOnly=yes -T git@github.com   # must NOT greet a personal login
+```
 
 ---
 
@@ -131,10 +136,20 @@ plus a dedicated SSH key. Do not assume it is handled.
 - Sections still carrying a `.placeholder` block are unfinished and marked as
   such in `README.md`. Do not quietly delete a placeholder — fill it or leave it.
 
-## 6. Committing
+## 6. Committing — show the author first
 
-Committing and pushing to this repo are authorized — it is a public artifact that
-is expected to be updated. Run `tools/check_anonymity.sh` first, every time.
+**Build it, screenshot it, and show the author locally before any commit or
+push.** This page is a public artifact of a paper under review; the author
+reviews changes before they go online, not after. This instruction stands until
+they say otherwise.
+
+Once they have signed off: run the audit, commit, push.
+
+```bash
+~/.config/hoi-retarget/check_anonymity.sh .   # must be CLEAN
+```
+
+To preview locally: `python3 -m http.server 8731` in the repo root.
 
 Note that this differs from the surrounding private workspace, where commits are
-the author's to make. That rule still holds for every other repo.
+the author's to make entirely. That rule still holds for every other repo.
